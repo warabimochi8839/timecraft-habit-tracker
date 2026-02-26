@@ -1,5 +1,6 @@
 import { ChevronLeft, Calendar, ChevronRight, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, subDays, format, parseISO } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import './Summary.css';
@@ -37,8 +38,23 @@ export const Summary: React.FC = () => {
         toast.success('新しいインサイトを読み込みました');
     };
 
-    // 1. Gather events for the selected day
-    const todaysEvents = state.events.filter(ev => ev.date === state.selectedDate);
+    // 1. Gather events for the selected period
+    const targetDate = parseISO(state.selectedDate);
+
+    const filteredEvents = state.events.filter(ev => {
+        const evDate = parseISO(ev.date);
+        if (timeTab === 'today') {
+            return ev.date === state.selectedDate;
+        } else if (timeTab === 'week') {
+            const start = startOfWeek(targetDate, { weekStartsOn: 1 }); // Monday
+            const end = endOfWeek(targetDate, { weekStartsOn: 1 });
+            return isWithinInterval(evDate, { start, end });
+        } else {
+            const start = startOfMonth(targetDate);
+            const end = endOfMonth(targetDate);
+            return isWithinInterval(evDate, { start, end });
+        }
+    });
 
     // 2. Compute aggregate time per category in minutes
     const categoryMinutes: Record<string, number> = {
@@ -48,7 +64,7 @@ export const Summary: React.FC = () => {
         free: 0
     };
 
-    todaysEvents.forEach(ev => {
+    filteredEvents.forEach(ev => {
         if (!ev.startTime || !ev.endTime) return;
         const startMins = getMinutesFromStrictTime(ev.startTime);
         const endMins = getMinutesFromStrictTime(ev.endTime);
@@ -87,13 +103,65 @@ export const Summary: React.FC = () => {
     const donutGradient = totalTrackedMins > 0
         ? `conic-gradient(${gWork}, ${gSleep}, ${gStudy}, ${gFree})`
         : `conic-gradient(#2a3447 0deg 360deg)`;
+
+    // 5. Weekly Line Chart Logic (last 7 days from selected date)
+    const last7Days = Array.from({ length: 7 }).map((_, i) => {
+        const d = subDays(targetDate, 6 - i);
+        return {
+            dateStr: format(d, 'yyyy-MM-dd'),
+            dayStr: ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
+        };
+    });
+
+    const weeklyData = last7Days.map(dayObj => {
+        const dayEvents = state.events.filter(ev => ev.date === dayObj.dateStr);
+        let totalMins = 0;
+        dayEvents.forEach(ev => {
+            if (!ev.startTime || !ev.endTime) return;
+            const startMins = getMinutesFromStrictTime(ev.startTime);
+            const endMins = getMinutesFromStrictTime(ev.endTime);
+            totalMins += Math.max(0, endMins - startMins);
+        });
+        return {
+            ...dayObj,
+            totalMins,
+            hours: totalMins / 60
+        };
+    });
+
+    const maxHours = Math.max(...weeklyData.map(d => d.hours), 1); // Avoid div by 0
+
+    // Build SVG path
+    // Width 100, Height 40. Start at x=0 to x=100. y=40 is 0 hours, y=5 is maxHours (leaving 5px padding)
+    const points = weeklyData.map((d, i) => {
+        const x = (i / 6) * 100;
+        const y = 40 - (d.hours / maxHours) * 35;
+        return { x, y };
+    });
+
+    // Create curved path
+    const createPath = (pts: { x: number, y: number }[]) => {
+        if (pts.length === 0) return '';
+        let d = `M ${pts[0].x} ${pts[0].y}`;
+        for (let i = 1; i < pts.length; i++) {
+            const prev = pts[i - 1];
+            const curr = pts[i];
+            const cpX = (prev.x + curr.x) / 2;
+            d += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
+        }
+        return d;
+    };
+
+    const strokePath = createPath(points);
+    const fillPath = `${strokePath} L 100 40 L 0 40 Z`;
+
     return (
         <div className="summary-page">
             {/* Header */}
             <header className="page-header">
-                <button className="icon-button"><ChevronLeft size={24} /></button>
+                <button className="icon-button" onClick={() => toast.info('戻る機能は準備中です')}><ChevronLeft size={24} /></button>
                 <h2 className="page-title">分析ダッシュボード</h2>
-                <button className="icon-button"><Calendar size={24} /></button>
+                <button className="icon-button" onClick={() => toast.info('カレンダー確認は準備中です')}><Calendar size={24} /></button>
             </header>
 
             <div className="summary-scroll-area">
@@ -215,7 +283,6 @@ export const Summary: React.FC = () => {
                 </div>
 
                 <div className="analysis-card mt-2">
-                    {/* SVG Line Chart mock */}
                     <div className="line-chart-mock">
                         <svg viewBox="0 0 100 40" className="chart-svg">
                             <defs>
@@ -224,15 +291,17 @@ export const Summary: React.FC = () => {
                                     <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
                                 </linearGradient>
                             </defs>
-                            <path d="M 0 30 Q 10 30 20 20 T 40 10 T 60 25 T 80 30 T 100 30 L 100 40 L 0 40 Z" fill="url(#chartGrad)" />
-                            <path d="M 0 30 Q 10 30 20 20 T 40 10 T 60 25 T 80 30 T 100 30" fill="none" stroke="#3b82f6" strokeWidth="1.5" />
+                            <path d={fillPath} fill="url(#chartGrad)" />
+                            <path d={strokePath} fill="none" stroke="#3b82f6" strokeWidth="1.5" />
 
-                            <circle cx="20" cy="20" r="1.5" fill="#1a1f2e" stroke="#3b82f6" strokeWidth="0.8" />
-                            <circle cx="40" cy="10" r="1.5" fill="#1a1f2e" stroke="#3b82f6" strokeWidth="0.8" />
-                            <circle cx="60" cy="25" r="1.5" fill="#1a1f2e" stroke="#3b82f6" strokeWidth="0.8" />
+                            {points.map((pt, i) => (
+                                <circle key={i} cx={pt.x} cy={pt.y} r="1.5" fill="#1a1f2e" stroke="#3b82f6" strokeWidth="0.8" />
+                            ))}
                         </svg>
                         <div className="chart-labels-x">
-                            <span>月</span><span>火</span><span className="active">水</span><span>木</span><span>金</span><span>土</span><span>日</span>
+                            {weeklyData.map((d, i) => (
+                                <span key={i} className={i === 6 ? 'active' : ''}>{d.dayStr}</span>
+                            ))}
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 import { ChevronLeft, Settings, Flame, GraduationCap, Moon, BookOpen, Dumbbell, Check, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { AddModal } from './AddModal';
 import { EditHabitModal } from './EditHabitModal';
 import type { Habit } from '../types';
@@ -45,6 +46,24 @@ export const Habits: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
+    // Get today's events for duration matching
+    const todaysEvents = state.events.filter(ev => ev.date === today);
+
+    // Helper to calculate tracked minutes for a specific category today
+    const getTrackedMinutesForCategory = (category: string) => {
+        let totalMins = 0;
+        todaysEvents.forEach(ev => {
+            if (ev.category === category && ev.startTime && ev.endTime) {
+                const [sH, sM] = ev.startTime.split(':').map(Number);
+                const [eH, eM] = ev.endTime.split(':').map(Number);
+                const startMins = (sH || 0) * 60 + (sM || 0);
+                const endMins = (eH || 0) * 60 + (eM || 0);
+                totalMins += Math.max(0, endMins - startMins);
+            }
+        });
+        return totalMins;
+    };
+
     // Derived state
     const completedCount = state.habits.filter(h => h.completedDates.includes(today)).length;
     const totalCount = state.habits.length;
@@ -54,9 +73,9 @@ export const Habits: React.FC = () => {
         <div className="habits-page">
             {/* Header */}
             <header className="page-header">
-                <button className="icon-button"><ChevronLeft size={24} /></button>
+                <button className="icon-button" onClick={() => toast.info('戻る機能は準備中です')}><ChevronLeft size={24} /></button>
                 <h2 className="page-title">目標設定</h2>
-                <button className="icon-button"><Settings size={24} /></button>
+                <button className="icon-button" onClick={() => toast.info('設定画面は準備中です')}><Settings size={24} /></button>
             </header>
 
             <div className="habits-scroll-area">
@@ -91,9 +110,15 @@ export const Habits: React.FC = () => {
                     {state.habits.map(habit => {
                         const isCompleted = habit.completedDates.includes(today);
 
-                        // Just an arbitrary mock progress for uncompleted tasks (e.g. 50%) for visual parity with screenshot
-                        // Realistically this would be driven by time-tracking tie-in later
-                        const progressPct = isCompleted ? 100 : 33;
+                        // Calculate progress based on actual tracked events in timeline matching the category
+                        const actualTrackedMins = getTrackedMinutesForCategory(habit.category);
+                        const progressPctRaw = habit.targetTimeMinutes > 0 ? (actualTrackedMins / habit.targetTimeMinutes) * 100 : 0;
+                        const progressPct = isCompleted ? 100 : Math.min(100, Math.round(progressPctRaw));
+
+                        // For display, use the exact tracked time unless they marked complete manually
+                        const displayMins = isCompleted && actualTrackedMins < habit.targetTimeMinutes
+                            ? habit.targetTimeMinutes
+                            : actualTrackedMins;
 
                         return (
                             <div
@@ -137,7 +162,7 @@ export const Habits: React.FC = () => {
                                     ) : (
                                         <div className="goal-stats">
                                             <span className={`stat-current ${habit.category === 'study' || habit.category === 'sleep' ? 'text-blue' : 'text-purple'}`}>
-                                                {progressPct === 100 ? habit.targetTimeMinutes : Math.floor(habit.targetTimeMinutes * (progressPct / 100))}
+                                                {displayMins}
                                             </span>
                                             <span className="stat-total"> / {habit.targetTimeMinutes} 分</span>
                                         </div>

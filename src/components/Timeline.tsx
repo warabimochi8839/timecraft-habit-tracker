@@ -1,8 +1,7 @@
-
 import { ChevronLeft, ChevronRight, Calendar, Sun, Briefcase, Laptop, Coffee, Mic, Send, Edit3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { format, addDays, subDays } from 'date-fns';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { EditEventModal } from './EditEventModal';
 import type { TimelineEvent } from '../types';
@@ -44,15 +43,52 @@ export const Timeline: React.FC = () => {
     const handlePrevDay = () => setSelectedDate(format(subDays(currentDateObj, 1), 'yyyy-MM-dd'));
     const handleNextDay = () => setSelectedDate(format(addDays(currentDateObj, 1), 'yyyy-MM-dd'));
 
-    // Simulate recording
+    // Generate 7 days for the date navigator (start from current date's Monday, or just center around current date)
+    // Let's create a sliding window: 3 days before, current day, 3 days after
+    const visibleDays = Array.from({ length: 7 }).map((_, i) => subDays(currentDateObj, 3 - i));
+
+    // Setup Speech Recognition
+    const recognitionRef = useRef<any>(null);
+
+    useEffect(() => {
+        if ('webkitSpeechRecognition' in window) {
+            const SpeechRecognition = (window as any).webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = false;
+            recognitionRef.current.interimResults = false;
+            recognitionRef.current.lang = 'ja-JP';
+
+            recognitionRef.current.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                setMemoText(prev => prev + (prev ? ' ' : '') + transcript);
+            };
+
+            recognitionRef.current.onerror = (event: any) => {
+                console.error('Speech recognition error', event.error);
+                setIsRecording(false);
+                toast.error(`音声認識エラー: ${event.error}`);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsRecording(false);
+                toast.success('音声入力を完了しました');
+            };
+        }
+    }, []);
+
     const toggleRecording = () => {
         if (isRecording) {
+            recognitionRef.current?.stop();
             setIsRecording(false);
-            toast.success('録音を完了しました');
-            setMemoText(prev => prev + (prev ? ' ' : '') + '音声入力のテキスト...');
         } else {
-            setIsRecording(true);
-            toast('録音を開始しました...', { icon: <Mic size={16} className="text-accent" /> });
+            if (recognitionRef.current) {
+                setMemoText(''); // Optional: clear or keep appending
+                recognitionRef.current.start();
+                setIsRecording(true);
+                toast('音声入力を待機中...', { icon: <Mic size={16} className="text-accent" /> });
+            } else {
+                toast.error('このブラウザは音声認識に対応していません');
+            }
         }
     };
 
@@ -99,16 +135,20 @@ export const Timeline: React.FC = () => {
                 </div>
 
                 <div className="days-row">
-                    {['月', '火', '水', '木', '金', '土', '日'].map((day, idx) => {
-                        // Very rough logic just to show the user's selected day as active visually 
-                        // In a real app we'd map this properly to the dates of the week
-                        const isSelectedVisually = (currentDateObj.getDay() || 7) === idx + 1;
+                    {visibleDays.map((dayObj, idx) => {
+                        const isSelected = format(dayObj, 'yyyy-MM-dd') === state.selectedDate;
+                        const dayName = ['日', '月', '火', '水', '木', '金', '土'][dayObj.getDay()];
+
                         return (
-                            <div key={idx} className="day-col">
-                                <span className="day-name">{day}</span>
-                                <div className={`day-number ${isSelectedVisually ? 'active' : ''}`}>
-                                    {/* Offset day number based on selected date */}
-                                    {currentDateObj.getDate() - ((currentDateObj.getDay() || 7) - (idx + 1))}
+                            <div
+                                key={idx}
+                                className="day-col"
+                                onClick={() => setSelectedDate(format(dayObj, 'yyyy-MM-dd'))}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <span className={`day-name ${isSelected ? 'text-accent' : ''}`}>{dayName}</span>
+                                <div className={`day-number ${isSelected ? 'active' : ''}`}>
+                                    {dayObj.getDate()}
                                 </div>
                             </div>
                         );
