@@ -1,5 +1,7 @@
 import { ChevronLeft, Calendar, ChevronRight, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import './Summary.css';
 
 // Helper to convert HH:MM to minutes
@@ -19,6 +21,21 @@ const formatDuration = (totalMinutes: number) => {
 
 export const Summary: React.FC = () => {
     const { state } = useApp();
+    const [timeTab, setTimeTab] = useState<'today' | 'week' | 'month'>('week');
+
+    // Simulate insight updates
+    const insights = [
+        "午後の学習効率が高い傾向があります。",
+        "睡眠時間が目標に達していません。",
+        "昨日はよく集中できていましたね！",
+        "この調子で習慣を継続しましょう。"
+    ];
+    const [insightIdx, setInsightIdx] = useState(0);
+
+    const handleNextInsight = () => {
+        setInsightIdx((prev) => (prev + 1) % insights.length);
+        toast.success('新しいインサイトを読み込みました');
+    };
 
     // 1. Gather events for the selected day
     const todaysEvents = state.events.filter(ev => ev.date === state.selectedDate);
@@ -83,9 +100,18 @@ export const Summary: React.FC = () => {
 
                 {/* Toggle Tabs */}
                 <div className="time-toggle">
-                    <button className="toggle-btn">今日</button>
-                    <button className="toggle-btn active">今週</button>
-                    <button className="toggle-btn">今月</button>
+                    <button
+                        className={`toggle-btn ${timeTab === 'today' ? 'active' : ''}`}
+                        onClick={() => setTimeTab('today')}
+                    >今日</button>
+                    <button
+                        className={`toggle-btn ${timeTab === 'week' ? 'active' : ''}`}
+                        onClick={() => setTimeTab('week')}
+                    >今週</button>
+                    <button
+                        className={`toggle-btn ${timeTab === 'month' ? 'active' : ''}`}
+                        onClick={() => setTimeTab('month')}
+                    >今月</button>
                 </div>
 
                 {/* Time Distribution Card */}
@@ -94,7 +120,10 @@ export const Summary: React.FC = () => {
                         <h3 className="card-title-with-dot">
                             時間配分 <span className="blue-dot"></span>
                         </h3>
-                        <button className="pill-action-btn">
+                        <button
+                            className="pill-action-btn"
+                            onClick={() => toast.info('詳細レポートは準備中です')}
+                        >
                             詳細 <ChevronRight size={14} />
                         </button>
                     </div>
@@ -172,9 +201,9 @@ export const Summary: React.FC = () => {
                         <h4 className="insight-title">
                             <span className="emoji">💡</span> 改善のヒントを表示
                         </h4>
-                        <span className="insight-desc">あなたのデータを基にしたアドバイス</span>
+                        <span className="insight-desc">{insights[insightIdx]}</span>
                     </div>
-                    <button className="insight-action-btn">
+                    <button className="insight-action-btn" onClick={handleNextInsight}>
                         <ArrowRight size={18} />
                     </button>
                 </div>

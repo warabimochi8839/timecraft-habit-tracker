@@ -2,6 +2,7 @@ import { ChevronLeft, Settings, Flame, GraduationCap, Moon, BookOpen, Dumbbell, 
 import { useApp } from '../context/AppContext';
 import { useState } from 'react';
 import { AddModal } from './AddModal';
+import { toast } from 'sonner';
 import './Habits.css';
 
 const getHabitIcon = (category: string) => {
@@ -108,6 +109,20 @@ export const Habits: React.FC = () => {
                                     <div className="goal-info">
                                         <h4>{habit.title}</h4>
                                         <span className="goal-desc">{habit.category === 'sleep' ? '十分な睡眠を確保' : '目標を達成する'}</span>
+                                    </div>
+
+                                    <div className="goal-card-actions" style={{ marginLeft: 'auto' }}>
+                                        <button
+                                            className="icon-button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toast.info(`「${habit.title}」の編集・削除は準備中です`);
+                                            }}
+                                            style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)' }}
+                                            aria-label="オプション"
+                                        >
+                                            <Settings size={16} />
+                                        </button>
                                     </div>
 
                                     {isCompleted ? (

@@ -4,6 +4,7 @@ import { Timeline } from './components/Timeline';
 import { Habits } from './components/Habits';
 import { Summary } from './components/Summary';
 import { AddModal } from './components/AddModal';
+import { Toaster, toast } from 'sonner';
 import './App.css';
 
 function App() {
@@ -66,7 +67,7 @@ function App() {
         </button>
         <button
           className="nav-btn"
-          onClick={() => { }}
+          onClick={() => toast.info('アカウント設定は準備中です')}
         >
           <User size={22} strokeWidth={2.5} />
           <span>ｱｶｳﾝﾄ</span>
@@ -79,6 +80,8 @@ function App() {
         onClose={() => setIsAddModalOpen(false)}
         initialTab={activeTab === 'habits' ? 'habit' : 'event'}
       />
+
+      <Toaster position="top-center" theme="dark" />
     </div>
   );
 }

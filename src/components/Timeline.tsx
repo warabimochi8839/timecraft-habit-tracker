@@ -2,6 +2,8 @@
 import { ChevronLeft, ChevronRight, Calendar, Sun, Briefcase, Laptop, Coffee, Mic, Send, Edit3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { format, addDays, subDays } from 'date-fns';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import './Timeline.css';
 
 const getCategoryIcon = (category: string) => {
@@ -25,7 +27,9 @@ const getCategoryColorClass = (category: string) => {
 };
 
 export const Timeline: React.FC = () => {
-    const { state, setSelectedDate } = useApp();
+    const { state, setSelectedDate, addEvent } = useApp();
+    const [isRecording, setIsRecording] = useState(false);
+    const [memoText, setMemoText] = useState('');
 
     const todaysEvents = state.events
         .filter(ev => ev.date === state.selectedDate)
@@ -36,6 +40,40 @@ export const Timeline: React.FC = () => {
 
     const handlePrevDay = () => setSelectedDate(format(subDays(currentDateObj, 1), 'yyyy-MM-dd'));
     const handleNextDay = () => setSelectedDate(format(addDays(currentDateObj, 1), 'yyyy-MM-dd'));
+
+    // Simulate recording
+    const toggleRecording = () => {
+        if (isRecording) {
+            setIsRecording(false);
+            toast.success('録音を完了しました');
+            setMemoText(prev => prev + (prev ? ' ' : '') + '音声入力のテキスト...');
+        } else {
+            setIsRecording(true);
+            toast('録音を開始しました...', { icon: <Mic size={16} className="text-accent" /> });
+        }
+    };
+
+    // Send Daily Memo
+    const handleSendMemo = () => {
+        if (!memoText.trim()) {
+            toast.error('メモを入力してください');
+            return;
+        }
+
+        addEvent({
+            title: 'Daily Memo',
+            category: 'free',
+            startTime: format(new Date(), 'HH:mm'), // current time roughly
+            endTime: format(new Date(Date.now() + 30 * 60000), 'HH:mm'), // +30m
+            date: state.selectedDate,
+            memo: memoText,
+            tags: ['Memo']
+        });
+
+        toast.success('メモを保存しました');
+        setMemoText('');
+    };
+
     return (
         <div className="timeline-page">
             {/* Header */}
@@ -58,14 +96,20 @@ export const Timeline: React.FC = () => {
                 </div>
 
                 <div className="days-row">
-                    {['月', '火', '水', '木', '金', '土', '日'].map((day, idx) => (
-                        <div key={idx} className="day-col">
-                            <span className="day-name">{day}</span>
-                            <div className={`day-number ${day === '木' ? 'active' : ''}`}>
-                                {idx + 2}
+                    {['月', '火', '水', '木', '金', '土', '日'].map((day, idx) => {
+                        // Very rough logic just to show the user's selected day as active visually 
+                        // In a real app we'd map this properly to the dates of the week
+                        const isSelectedVisually = (currentDateObj.getDay() || 7) === idx + 1;
+                        return (
+                            <div key={idx} className="day-col">
+                                <span className="day-name">{day}</span>
+                                <div className={`day-number ${isSelectedVisually ? 'active' : ''}`}>
+                                    {/* Offset day number based on selected date */}
+                                    {currentDateObj.getDate() - ((currentDateObj.getDay() || 7) - (idx + 1))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -83,12 +127,25 @@ export const Timeline: React.FC = () => {
                                 <div className={`timeline-icon-wrapper ${getCategoryColorClass(event.category)}`}>
                                     {getCategoryIcon(event.category)}
                                 </div>
-                                <div className={`timeline-card ${event.category === 'work' ? 'border-accent-left' : ''}`}>
+                                <div
+                                    className={`timeline-card ${event.category === 'work' ? 'border-accent-left' : ''}`}
+                                    onClick={() => toast.info(`${event.title} の詳細・編集機能は準備中です`)}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     <div className="card-top">
                                         <span className={`event-time ${event.category === 'work' ? 'text-accent' : 'text-muted'}`}>
                                             {event.startTime} - {event.endTime}
                                         </span>
-                                        <span className="event-more">...</span>
+                                        <button
+                                            className="event-more"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toast.info('設定メニューを開きます');
+                                            }}
+                                            style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer' }}
+                                        >
+                                            ...
+                                        </button>
                                     </div>
                                     <h3 className="event-title">{event.title}</h3>
                                     {event.memo && <span className="event-location text-muted">{event.memo}</span>}
@@ -113,14 +170,26 @@ export const Timeline: React.FC = () => {
                         <h3>Daily Memo</h3>
                     </div>
                     <div className="memo-box">
-                        <p className="memo-placeholder text-muted">
-                            今日はどんな一日でしたか？気づきや反省を記録しましょう...
-                        </p>
+                        <textarea
+                            className="memo-textarea text-main"
+                            value={memoText}
+                            onChange={(e) => setMemoText(e.target.value)}
+                            placeholder="今日はどんな一日でしたか？気づきや反省を記録しましょう..."
+                            rows={3}
+                            style={{ width: '100%', background: 'transparent', border: 'none', resize: 'none', outline: 'none' }}
+                        />
                         <div className="memo-actions">
-                            <button className="memo-circle-btn bg-dark">
-                                <Mic size={18} />
+                            <button
+                                className={`memo-circle-btn ${isRecording ? 'bg-accent' : 'bg-dark'}`}
+                                onClick={toggleRecording}
+                                style={{ transition: 'background-color 0.2s' }}
+                            >
+                                <Mic size={18} className={isRecording ? 'pulse-anim' : ''} />
                             </button>
-                            <button className="memo-square-btn bg-accent">
+                            <button
+                                className="memo-square-btn bg-accent"
+                                onClick={handleSendMemo}
+                            >
                                 <Send size={18} color="#fff" />
                             </button>
                         </div>
