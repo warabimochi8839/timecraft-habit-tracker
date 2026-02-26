@@ -1,8 +1,52 @@
-import React from 'react';
 import { ChevronLeft, Settings, Flame, GraduationCap, Moon, BookOpen, Dumbbell, Check, Plus } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { useState } from 'react';
+import { AddModal } from './AddModal';
 import './Habits.css';
 
+const getHabitIcon = (category: string) => {
+    switch (category) {
+        case 'study': return <GraduationCap size={20} className="text-blue" />;
+        case 'sleep': return <Moon size={20} color="#fff" fill="#fff" />;
+        case 'free': return <BookOpen size={20} className="text-purple" />;
+        default: return <Dumbbell size={20} className="text-muted" />;
+    }
+};
+
+const getHabitColorClass = (category: string, isCompleted: boolean) => {
+    if (isCompleted) {
+        if (category === 'study') return 'bg-blue-solid';
+        if (category === 'sleep') return 'bg-blue-solid';
+        if (category === 'free') return 'bg-purple-solid';
+        return 'bg-dark';
+    }
+    switch (category) {
+        case 'study': return 'bg-blue-subtle';
+        case 'sleep': return 'bg-blue-subtle';
+        case 'free': return 'bg-purple-subtle';
+        default: return 'bg-dark';
+    }
+};
+
+const getProgressBarColor = (category: string) => {
+    switch (category) {
+        case 'study': return 'bg-blue';
+        case 'sleep': return 'bg-blue';
+        case 'free': return 'bg-purple';
+        default: return 'bg-muted';
+    }
+};
+
 export const Habits: React.FC = () => {
+    const { state, toggleHabitCompletion } = useApp();
+    const today = state.selectedDate;
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Derived state
+    const completedCount = state.habits.filter(h => h.completedDates.includes(today)).length;
+    const totalCount = state.habits.length;
+    // For the UI, we just find the max streak from habits
+    const maxStreak = Math.max(...state.habits.map(h => h.currentStreak), 0);
     return (
         <div className="habits-page">
             {/* Header */}
@@ -19,7 +63,7 @@ export const Habits: React.FC = () => {
                     <span className="streak-label">現在のストリーク</span>
                     <div className="streak-value-container">
                         <Flame size={32} className="text-orange" fill="#f59e0b" />
-                        <span className="streak-big-number">5</span>
+                        <span className="streak-big-number">{maxStreak || 0}</span>
                         <span className="streak-text">日連続達成！</span>
                     </div>
                     <div className="streak-progress-bar">
@@ -35,104 +79,74 @@ export const Habits: React.FC = () => {
                         <h3>今日の目標</h3>
                     </div>
                     <div className="status-pill">
-                        <span>3/5 完了</span>
+                        <span>{completedCount}/{totalCount} 完了</span>
                     </div>
                 </div>
 
                 {/* Goals List */}
                 <div className="goals-list">
+                    {state.habits.map(habit => {
+                        const isCompleted = habit.completedDates.includes(today);
 
-                    {/* Goal 1: Study */}
-                    <div className="goal-card">
-                        <div className="goal-card-top">
-                            <div className="goal-icon-box bg-blue-subtle">
-                                <GraduationCap size={20} className="text-blue" />
-                            </div>
-                            <div className="goal-info">
-                                <h4>勉強</h4>
-                                <span className="goal-desc">英語のリスニング練習</span>
-                            </div>
-                            <div className="goal-stats">
-                                <span className="stat-current text-blue">3</span>
-                                <span className="stat-total"> / 4 時間</span>
-                            </div>
-                        </div>
-                        <div className="goal-progress-track">
-                            <div className="goal-progress-fill bg-blue" style={{ width: '75%' }}></div>
-                        </div>
-                    </div>
+                        // Just an arbitrary mock progress for uncompleted tasks (e.g. 50%) for visual parity with screenshot
+                        // Realistically this would be driven by time-tracking tie-in later
+                        const progressPct = isCompleted ? 100 : 33;
 
-                    {/* Goal 2: Sleep (Completed) */}
-                    <div className="goal-card border-glow">
-                        <div className="goal-card-top">
-                            <div className="goal-icon-box bg-blue-solid">
-                                <Moon size={20} color="#fff" fill="#fff" />
-                            </div>
-                            <div className="goal-info">
-                                <h4>睡眠</h4>
-                                <span className="goal-desc">7時間以上の睡眠を確保</span>
-                            </div>
-                            <div className="goal-stats flex-align">
-                                <span className="stat-current text-blue f-bold">完了</span>
-                                <div className="check-circle">
-                                    <Check size={14} color="#3b82f6" />
+                        return (
+                            <div
+                                key={habit.id}
+                                className={`goal-card ${isCompleted ? 'border-glow' : ''} ${habit.targetTimeMinutes === 0 ? 'disabled-card' : ''}`}
+                                onClick={() => toggleHabitCompletion(habit.id, today)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className="goal-card-top">
+                                    <div className={`goal-icon-box ${getHabitColorClass(habit.category, isCompleted)}`}>
+                                        {isCompleted && (habit.category === 'sleep' || habit.category === 'study') ? (
+                                            <Moon size={20} color="#fff" fill="#fff" /> /* Force moon icon logic from screenshot mock */
+                                        ) : getHabitIcon(habit.category)}
+                                    </div>
+                                    <div className="goal-info">
+                                        <h4>{habit.title}</h4>
+                                        <span className="goal-desc">{habit.category === 'sleep' ? '十分な睡眠を確保' : '目標を達成する'}</span>
+                                    </div>
+
+                                    {isCompleted ? (
+                                        <div className="goal-stats flex-align">
+                                            <span className="stat-current text-blue f-bold">完了</span>
+                                            <div className="check-circle">
+                                                <Check size={14} color="#3b82f6" />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="goal-stats">
+                                            <span className={`stat-current ${habit.category === 'study' || habit.category === 'sleep' ? 'text-blue' : 'text-purple'}`}>
+                                                {progressPct === 100 ? habit.targetTimeMinutes : Math.floor(habit.targetTimeMinutes * (progressPct / 100))}
+                                            </span>
+                                            <span className="stat-total"> / {habit.targetTimeMinutes} 分</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={`goal-progress-track ${habit.targetTimeMinutes === 0 ? 'bg-darker' : ''}`}>
+                                    <div className={`goal-progress-fill ${getProgressBarColor(habit.category)}`} style={{ width: `${progressPct}%` }}></div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="goal-progress-track">
-                            <div className="goal-progress-fill bg-blue" style={{ width: '100%' }}></div>
-                        </div>
-                    </div>
-
-                    {/* Goal 3: Reading */}
-                    <div className="goal-card">
-                        <div className="goal-card-top">
-                            <div className="goal-icon-box bg-purple-subtle">
-                                <BookOpen size={20} className="text-purple" />
-                            </div>
-                            <div className="goal-info">
-                                <h4>読書</h4>
-                                <span className="goal-desc">ビジネス書の要約を読む</span>
-                            </div>
-                            <div className="goal-stats">
-                                <span className="stat-current text-purple">10</span>
-                                <span className="stat-total"> / 30 分</span>
-                            </div>
-                        </div>
-                        <div className="goal-progress-track">
-                            <div className="goal-progress-fill bg-purple" style={{ width: '33%' }}></div>
-                        </div>
-                    </div>
-
-                    {/* Goal 4: Exercise (Disabled/Empty) */}
-                    <div className="goal-card disabled-card">
-                        <div className="goal-card-top">
-                            <div className="goal-icon-box bg-dark">
-                                <Dumbbell size={20} className="text-muted" />
-                            </div>
-                            <div className="goal-info">
-                                <h4>運動</h4>
-                                <span className="goal-desc">ジムまたはランニング</span>
-                            </div>
-                            <div className="goal-stats">
-                                <span className="stat-current text-muted">0</span>
-                                <span className="stat-total"> / 45 分</span>
-                            </div>
-                        </div>
-                        <div className="goal-progress-track bg-darker">
-                            <div className="goal-progress-fill" style={{ width: '0%' }}></div>
-                        </div>
-                    </div>
-
+                        );
+                    })}
                 </div>
 
                 {/* Add Button */}
-                <button className="add-goal-btn">
+                <button className="add-goal-btn" onClick={() => setIsAddModalOpen(true)}>
                     <Plus size={18} className="text-muted" />
                     <span>新しい目標を追加</span>
                 </button>
 
             </div>
+
+            <AddModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                initialTab="habit"
+            />
         </div>
     );
 };

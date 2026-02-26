@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { Home, LayoutList, PieChart, User, Plus, Calendar, Flag, LayoutDashboard } from 'lucide-react';
+import { useState } from 'react';
+import { PieChart, User, Plus, Flag, LayoutDashboard } from 'lucide-react';
 import { Timeline } from './components/Timeline';
 import { Habits } from './components/Habits';
 import { Summary } from './components/Summary';
+import { AddModal } from './components/AddModal';
 import './App.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'timeline' | 'habits' | 'summary'>('timeline');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   return (
     <div className="app-container">
@@ -50,7 +52,7 @@ function App() {
 
         {/* Center Floating Button */}
         <div className="nav-fab-wrapper">
-          <button className="nav-fab">
+          <button className="nav-fab" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={28} color="#fff" strokeWidth={3} />
           </button>
         </div>
@@ -70,6 +72,13 @@ function App() {
           <span>ｱｶｳﾝﾄ</span>
         </button>
       </nav>
+
+      {/* Add Modal */}
+      <AddModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        initialTab={activeTab === 'habits' ? 'habit' : 'event'}
+      />
     </div>
   );
 }

@@ -1,8 +1,75 @@
-import React from 'react';
-import { ChevronLeft, Calendar, ChevronRight, Lightbulb, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Calendar, ChevronRight, ArrowRight } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import './Summary.css';
 
+// Helper to convert HH:MM to minutes
+const getMinutesFromStrictTime = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+};
+
+// Helper to format minutes to "Xh Ym"
+const formatDuration = (totalMinutes: number) => {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+};
+
 export const Summary: React.FC = () => {
+    const { state } = useApp();
+
+    // 1. Gather events for the selected day
+    const todaysEvents = state.events.filter(ev => ev.date === state.selectedDate);
+
+    // 2. Compute aggregate time per category in minutes
+    const categoryMinutes: Record<string, number> = {
+        work: 0,
+        sleep: 0,
+        study: 0,
+        free: 0
+    };
+
+    todaysEvents.forEach(ev => {
+        if (!ev.startTime || !ev.endTime) return;
+        const startMins = getMinutesFromStrictTime(ev.startTime);
+        const endMins = getMinutesFromStrictTime(ev.endTime);
+        const duration = Math.max(0, endMins - startMins);
+        if (categoryMinutes[ev.category] !== undefined) {
+            categoryMinutes[ev.category] += duration;
+        } else {
+            categoryMinutes.free += duration; // Fallback to free/other
+        }
+    });
+
+    const totalTrackedMins = Object.values(categoryMinutes).reduce((a, b) => a + b, 0);
+
+    // 3. Calculate percentages
+    const getPct = (mins: number) => totalTrackedMins === 0 ? 0 : Math.round((mins / totalTrackedMins) * 100);
+
+    const workPct = getPct(categoryMinutes.work);
+    const sleepPct = getPct(categoryMinutes.sleep);
+    const studyPct = getPct(categoryMinutes.study);
+    const freePct = getPct(categoryMinutes.free);
+
+    // 4. Build conic gradient for the donut chart based on degrees
+    // Order: Work (main/blue), Sleep (cyan), Study (purple), Free/Other (gray/dark)
+    // Actually the mock CSS used: cyan, purple, dark blue, accent
+    let currentDeg = 0;
+    const workDeg = (categoryMinutes.work / (totalTrackedMins || 1)) * 360;
+    const sleepDeg = (categoryMinutes.sleep / (totalTrackedMins || 1)) * 360;
+    const studyDeg = (categoryMinutes.study / (totalTrackedMins || 1)) * 360;
+
+    // Build gradient string
+    const gWork = `var(--accent-main) ${currentDeg}deg ${currentDeg += workDeg}deg`;
+    const gSleep = `var(--accent-cyan) ${currentDeg}deg ${currentDeg += sleepDeg}deg`;
+    const gStudy = `var(--accent-purple) ${currentDeg}deg ${currentDeg += studyDeg}deg`;
+    const gFree = `#64748b ${currentDeg}deg 360deg`;
+
+    const donutGradient = totalTrackedMins > 0
+        ? `conic-gradient(${gWork}, ${gSleep}, ${gStudy}, ${gFree})`
+        : `conic-gradient(#2a3447 0deg 360deg)`;
     return (
         <div className="summary-page">
             {/* Header */}
@@ -34,13 +101,12 @@ export const Summary: React.FC = () => {
 
                     {/* Donut Chart Mockup */}
                     <div className="donut-chart-container">
-                        <div className="donut-ring">
-                            <div className="donut-segment seg-work"></div>
-                            <div className="donut-segment seg-sleep"></div>
-                            <div className="donut-segment seg-study"></div>
-                            <div className="donut-segment seg-other"></div>
+                        <div className="donut-ring" style={{ background: donutGradient }}>
                             <div className="donut-inner">
-                                <span className="donut-value">42<span className="donut-unit">h</span></span>
+                                <span className="donut-value">
+                                    {Math.floor(totalTrackedMins / 60)}
+                                    <span className="donut-unit">h</span>
+                                </span>
                                 <span className="donut-label pill-badge">合計時間</span>
                             </div>
                         </div>
@@ -55,8 +121,8 @@ export const Summary: React.FC = () => {
                                 <span className="legend-name">仕事</span>
                             </div>
                             <div className="legend-right">
-                                <span className="legend-percent f-bold">40%</span>
-                                <div className="legend-badge">16h 48m</div>
+                                <span className="legend-percent f-bold">{workPct}%</span>
+                                <div className="legend-badge">{formatDuration(categoryMinutes.work)}</div>
                                 <ChevronRight size={16} className="text-muted" />
                             </div>
                         </div>
@@ -67,8 +133,8 @@ export const Summary: React.FC = () => {
                                 <span className="legend-name">睡眠</span>
                             </div>
                             <div className="legend-right">
-                                <span className="legend-percent f-bold">25%</span>
-                                <div className="legend-badge">10h 30m</div>
+                                <span className="legend-percent f-bold">{sleepPct}%</span>
+                                <div className="legend-badge">{formatDuration(categoryMinutes.sleep)}</div>
                                 <ChevronRight size={16} className="text-muted" />
                             </div>
                         </div>
@@ -79,8 +145,8 @@ export const Summary: React.FC = () => {
                                 <span className="legend-name">学習</span>
                             </div>
                             <div className="legend-right">
-                                <span className="legend-percent f-bold">10%</span>
-                                <div className="legend-badge">4h 12m</div>
+                                <span className="legend-percent f-bold">{studyPct}%</span>
+                                <div className="legend-badge">{formatDuration(categoryMinutes.study)}</div>
                                 <ChevronRight size={16} className="text-muted" />
                             </div>
                         </div>
@@ -91,8 +157,8 @@ export const Summary: React.FC = () => {
                                 <span className="legend-name">その他</span>
                             </div>
                             <div className="legend-right">
-                                <span className="legend-percent f-bold">25%</span>
-                                <div className="legend-badge">10h 30m</div>
+                                <span className="legend-percent f-bold">{freePct}%</span>
+                                <div className="legend-badge">{formatDuration(categoryMinutes.free)}</div>
                                 <ChevronRight size={16} className="text-muted" />
                             </div>
                         </div>

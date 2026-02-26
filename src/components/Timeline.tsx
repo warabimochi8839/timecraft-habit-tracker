@@ -1,8 +1,41 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Sun, Train, Briefcase, Utensils, Laptop, Coffee, Mic, Send, Edit3 } from 'lucide-react';
+
+import { ChevronLeft, ChevronRight, Calendar, Sun, Briefcase, Laptop, Coffee, Mic, Send, Edit3 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { format, addDays, subDays } from 'date-fns';
 import './Timeline.css';
 
+const getCategoryIcon = (category: string) => {
+    switch (category) {
+        case 'sleep': return <Sun size={18} className="timeline-icon text-muted" />;
+        case 'work': return <Briefcase size={18} className="timeline-icon text-accent" />;
+        case 'study': return <Laptop size={18} className="timeline-icon text-purple" />;
+        case 'free': return <Coffee size={18} className="timeline-icon text-orange" />;
+        default: return <Edit3 size={18} className="timeline-icon text-muted" />;
+    }
+};
+
+const getCategoryColorClass = (category: string) => {
+    switch (category) {
+        case 'work': return 'border-accent';
+        case 'study': return 'border-purple';
+        case 'free': return 'border-orange';
+        case 'sleep': return 'border-muted';
+        default: return '';
+    }
+};
+
 export const Timeline: React.FC = () => {
+    const { state, setSelectedDate } = useApp();
+
+    const todaysEvents = state.events
+        .filter(ev => ev.date === state.selectedDate)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const currentDateObj = new Date(state.selectedDate);
+    const formattedMonth = format(currentDateObj, 'yyyy年MM月');
+
+    const handlePrevDay = () => setSelectedDate(format(subDays(currentDateObj, 1), 'yyyy-MM-dd'));
+    const handleNextDay = () => setSelectedDate(format(addDays(currentDateObj, 1), 'yyyy-MM-dd'));
     return (
         <div className="timeline-page">
             {/* Header */}
@@ -15,9 +48,13 @@ export const Timeline: React.FC = () => {
             {/* Date Navigator */}
             <div className="date-navigator">
                 <div className="month-selector">
-                    <ChevronLeft size={16} className="text-muted" />
-                    <span className="month-text">2023年10月</span>
-                    <ChevronRight size={16} className="text-muted" />
+                    <button className="icon-button" onClick={handlePrevDay}>
+                        <ChevronLeft size={16} className="text-muted" />
+                    </button>
+                    <span className="month-text">{formattedMonth}</span>
+                    <button className="icon-button" onClick={handleNextDay}>
+                        <ChevronRight size={16} className="text-muted" />
+                    </button>
                 </div>
 
                 <div className="days-row">
@@ -36,94 +73,37 @@ export const Timeline: React.FC = () => {
                 <div className="vertical-timeline-container">
                     <div className="timeline-vertical-line"></div>
 
-                    {/* Event 1 */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper">
-                            <Sun size={18} className="timeline-icon" />
+                    {todaysEvents.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                            予定がありません。<br />下の「＋」ボタンから追加してください。
                         </div>
-                        <div className="timeline-card">
-                            <div className="card-top">
-                                <span className="event-time text-accent">07:00</span>
-                                <span className="event-more">...</span>
-                            </div>
-                            <h3 className="event-title">起床・朝のルーティン</h3>
-                            <span className="event-location text-muted">自宅</span>
-                        </div>
-                    </div>
+                    ) : (
+                        todaysEvents.map((event) => (
+                            <div key={event.id} className="timeline-event">
+                                <div className={`timeline-icon-wrapper ${getCategoryColorClass(event.category)}`}>
+                                    {getCategoryIcon(event.category)}
+                                </div>
+                                <div className={`timeline-card ${event.category === 'work' ? 'border-accent-left' : ''}`}>
+                                    <div className="card-top">
+                                        <span className={`event-time ${event.category === 'work' ? 'text-accent' : 'text-muted'}`}>
+                                            {event.startTime} - {event.endTime}
+                                        </span>
+                                        <span className="event-more">...</span>
+                                    </div>
+                                    <h3 className="event-title">{event.title}</h3>
+                                    {event.memo && <span className="event-location text-muted">{event.memo}</span>}
 
-                    {/* Event 2 */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper">
-                            <Train size={18} className="timeline-icon" />
-                        </div>
-                        <div className="timeline-card">
-                            <div className="card-top">
-                                <span className="event-time text-muted">08:00 - 09:00</span>
+                                    {event.tags && event.tags.length > 0 && (
+                                        <div className="event-tags">
+                                            {event.tags.map(tag => (
+                                                <span key={tag} className="tag">{tag}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <h3 className="event-title">移動・読書</h3>
-                            <span className="event-location text-muted">電車内</span>
-                        </div>
-                    </div>
-
-                    {/* Event 3 (Work) */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper border-accent">
-                            <Briefcase size={18} className="timeline-icon text-accent" />
-                        </div>
-                        <div className="timeline-card border-accent-left">
-                            <div className="card-top">
-                                <span className="event-time text-accent">09:00 - 12:00</span>
-                            </div>
-                            <h3 className="event-title">仕事：プロジェクトA</h3>
-                            <span className="event-location text-muted">オフィス - 会議室</span>
-                        </div>
-                    </div>
-
-                    {/* Event 4 (Lunch) */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper border-green">
-                            <Utensils size={18} className="timeline-icon text-green" />
-                        </div>
-                        <div className="timeline-card border-none">
-                            <div className="card-top">
-                                <span className="event-time text-muted">12:00 - 13:00</span>
-                            </div>
-                            <h3 className="event-title">昼食</h3>
-                            <span className="event-location text-muted">カフェテラス</span>
-                        </div>
-                    </div>
-
-                    {/* Event 5 (Focus) */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper border-accent">
-                            <Laptop size={18} className="timeline-icon text-accent" />
-                        </div>
-                        <div className="timeline-card border-accent-left">
-                            <div className="card-top">
-                                <span className="event-time text-accent">13:00 - 18:00</span>
-                            </div>
-                            <h3 className="event-title">集中作業・コーディング</h3>
-                            <span className="event-location text-muted">オフィス - デスク</span>
-                            <div className="event-tags">
-                                <span className="tag">UI Design</span>
-                                <span className="tag">Frontend</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Event 6 (Dinner) */}
-                    <div className="timeline-event">
-                        <div className="timeline-icon-wrapper border-orange">
-                            <Coffee size={18} className="timeline-icon text-orange" />
-                        </div>
-                        <div className="timeline-card">
-                            <div className="card-top">
-                                <span className="event-time text-muted">19:00</span>
-                            </div>
-                            <h3 className="event-title">夕食</h3>
-                            <span className="event-location text-muted">自宅</span>
-                        </div>
-                    </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Daily Memo */}
