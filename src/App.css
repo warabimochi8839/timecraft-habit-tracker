@@ -1,0 +1,98 @@
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-bottom: 90px;
+  /* Space for bottom nav */
+}
+
+.transition-fade {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 16px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--bg-color);
+  border-top: 1px solid var(--card-border);
+  z-index: 100;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  flex: 1;
+  padding: 8px 0;
+}
+
+.nav-btn span {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.nav-btn.active {
+  color: var(--accent-main);
+}
+
+.nav-btn.active svg {
+  stroke: var(--accent-main);
+}
+
+.nav-fab-wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.nav-fab {
+  position: absolute;
+  top: -30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-main);
+  border: 4px solid var(--bg-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px var(--accent-main-glow);
+  transition: transform 0.2s;
+  z-index: 101;
+}
+
+.nav-fab.blue-variant {
+  /* Used in goals tab in mockup, but we'll stick to a primary + button for simplicity across app */
+}
+
+.nav-fab:active {
+  transform: scale(0.95);
+}

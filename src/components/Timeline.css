@@ -1,0 +1,302 @@
+.timeline-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background-color: var(--bg-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.page-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-accent {
+    color: var(--accent-main);
+}
+
+.text-green {
+    color: #10b981;
+}
+
+.text-orange {
+    color: #f59e0b;
+}
+
+.date-navigator {
+    padding: 8px 16px 24px;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.month-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.month-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.days-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+}
+
+.day-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.day-name {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.day-number {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.day-number.active {
+    background-color: var(--accent-main);
+    color: #fff;
+    box-shadow: 0 0 12px var(--accent-main-glow);
+}
+
+.timeline-scroll-area {
+    padding: 24px 16px 40px;
+    flex: 1;
+}
+
+/* Vertical Timeline Structure */
+.vertical-timeline-container {
+    position: relative;
+    padding-left: 48px;
+}
+
+.timeline-vertical-line {
+    position: absolute;
+    left: 23px;
+    /* Center of the icon */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #2a3447;
+    /* Dark grayish blue */
+}
+
+.timeline-event {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.timeline-icon-wrapper {
+    position: absolute;
+    left: -48px;
+    width: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 2;
+    margin-top: 8px;
+}
+
+.timeline-icon-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    border: 1px solid #2a3447;
+    z-index: -1;
+}
+
+.timeline-icon-wrapper.border-accent::before {
+    border-color: var(--accent-main);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.timeline-icon-wrapper.border-green::before {
+    border-color: #10b981;
+}
+
+.timeline-icon-wrapper.border-orange::before {
+    border-color: #f59e0b;
+}
+
+.timeline-icon {
+    margin-top: 8px;
+    color: var(--text-muted);
+}
+
+.timeline-card {
+    background-color: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    border: 1px solid var(--card-border);
+}
+
+.timeline-card.border-accent-left {
+    border-left: 3px solid var(--accent-main);
+}
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.event-time {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.event-more {
+    color: var(--text-muted);
+    font-weight: 800;
+    line-height: 0.5;
+}
+
+.event-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #fff;
+}
+
+.event-location {
+    font-size: 0.8rem;
+}
+
+.event-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.tag {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--accent-main);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* Daily Memo */
+.daily-memo-section {
+    margin-top: 40px;
+    margin-left: 20px;
+    /* Aligned slightly right of timeline */
+    position: relative;
+}
+
+.daily-memo-section::before {
+    content: '';
+    position: absolute;
+    left: -45px;
+    top: 6px;
+    width: 20px;
+    height: 2px;
+    background-color: #2a3447;
+}
+
+.memo-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.memo-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.memo-box {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    position: relative;
+    min-height: 140px;
+}
+
+.memo-placeholder {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.memo-actions {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    gap: 12px;
+}
+
+.memo-circle-btn,
+.memo-square-btn {
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.memo-circle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #2a3447;
+    color: var(--text-main);
+}
+
+.memo-square-btn {
+    width: 48px;
+    height: 40px;
+    border-radius: 12px;
+    /* Slightly squarish */
+    background-color: var(--accent-main);
+}
