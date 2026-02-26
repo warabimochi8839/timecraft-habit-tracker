@@ -1,7 +1,6 @@
 import { ChevronLeft, Settings, Flame, GraduationCap, Moon, BookOpen, Dumbbell, Check, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { AddModal } from './AddModal';
 import { EditHabitModal } from './EditHabitModal';
 import type { Habit } from '../types';
@@ -40,7 +39,7 @@ const getProgressBarColor = (category: string) => {
     }
 };
 
-export const Habits: React.FC = () => {
+export const Habits: React.FC<{ onBackClick?: () => void, onSettingsClick?: () => void }> = ({ onBackClick, onSettingsClick }) => {
     const { state, toggleHabitCompletion } = useApp();
     const today = state.selectedDate;
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -73,9 +72,9 @@ export const Habits: React.FC = () => {
         <div className="habits-page">
             {/* Header */}
             <header className="page-header">
-                <button className="icon-button" onClick={() => toast.info('戻る機能は準備中です')}><ChevronLeft size={24} /></button>
+                <button className="icon-button" onClick={onBackClick}><ChevronLeft size={24} /></button>
                 <h2 className="page-title">目標設定</h2>
-                <button className="icon-button" onClick={() => toast.info('設定画面は準備中です')}><Settings size={24} /></button>
+                <button className="icon-button" onClick={onSettingsClick}><Settings size={24} /></button>
             </header>
 
             <div className="habits-scroll-area">

@@ -4,12 +4,14 @@ import { Timeline } from './components/Timeline';
 import { Habits } from './components/Habits';
 import { Summary } from './components/Summary';
 import { AddModal } from './components/AddModal';
-import { Toaster, toast } from 'sonner';
+import { AccountModal } from './components/AccountModal';
+import { Toaster } from 'sonner';
 import './App.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'timeline' | 'habits' | 'summary'>('timeline');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   return (
     <div className="app-container">
@@ -23,13 +25,18 @@ function App() {
 
         {activeTab === 'habits' && (
           <div className="tab-content transition-fade">
-            <Habits />
+            <Habits
+              onBackClick={() => setActiveTab('timeline')}
+              onSettingsClick={() => setIsAccountModalOpen(true)}
+            />
           </div>
         )}
 
         {activeTab === 'summary' && (
           <div className="tab-content transition-fade">
-            <Summary />
+            <Summary
+              onBackClick={() => setActiveTab('timeline')}
+            />
           </div>
         )}
       </main>
@@ -67,7 +74,7 @@ function App() {
         </button>
         <button
           className="nav-btn"
-          onClick={() => toast.info('アカウント設定は準備中です')}
+          onClick={() => setIsAccountModalOpen(true)}
         >
           <User size={22} strokeWidth={2.5} />
           <span>ｱｶｳﾝﾄ</span>
@@ -79,6 +86,12 @@ function App() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         initialTab={activeTab === 'habits' ? 'habit' : 'event'}
+      />
+
+      {/* Account Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
       />
 
       <Toaster position="top-center" theme="dark" />

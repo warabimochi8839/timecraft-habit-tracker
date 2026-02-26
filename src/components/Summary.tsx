@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, subDays, format, parseISO } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CalendarModal } from './CalendarModal';
+import { DetailedReportModal } from './DetailedReportModal';
 import './Summary.css';
 
 // Helper to convert HH:MM to minutes
@@ -20,9 +22,11 @@ const formatDuration = (totalMinutes: number) => {
     return `${m}m`;
 };
 
-export const Summary: React.FC = () => {
+export const Summary: React.FC<{ onBackClick?: () => void }> = ({ onBackClick }) => {
     const { state } = useApp();
-    const [timeTab, setTimeTab] = useState<'today' | 'week' | 'month'>('week');
+    const [timeTab, setTimeTab] = useState<'today' | 'week' | 'month'>('today'); // default today since week depends on events
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isDetailedReportOpen, setIsDetailedReportOpen] = useState(false);
 
     // Simulate insight updates
     const insights = [
@@ -159,9 +163,9 @@ export const Summary: React.FC = () => {
         <div className="summary-page">
             {/* Header */}
             <header className="page-header">
-                <button className="icon-button" onClick={() => toast.info('戻る機能は準備中です')}><ChevronLeft size={24} /></button>
+                <button className="icon-button" onClick={onBackClick}><ChevronLeft size={24} /></button>
                 <h2 className="page-title">分析ダッシュボード</h2>
-                <button className="icon-button" onClick={() => toast.info('カレンダー確認は準備中です')}><Calendar size={24} /></button>
+                <button className="icon-button" onClick={() => setIsCalendarOpen(true)}><Calendar size={24} /></button>
             </header>
 
             <div className="summary-scroll-area">
@@ -190,7 +194,7 @@ export const Summary: React.FC = () => {
                         </h3>
                         <button
                             className="pill-action-btn"
-                            onClick={() => toast.info('詳細レポートは準備中です')}
+                            onClick={() => setIsDetailedReportOpen(true)}
                         >
                             詳細 <ChevronRight size={14} />
                         </button>
@@ -307,6 +311,16 @@ export const Summary: React.FC = () => {
                 </div>
 
             </div>
+
+            <CalendarModal
+                isOpen={isCalendarOpen}
+                onClose={() => setIsCalendarOpen(false)}
+            />
+
+            <DetailedReportModal
+                isOpen={isDetailedReportOpen}
+                onClose={() => setIsDetailedReportOpen(false)}
+            />
         </div>
     );
 };
