@@ -2,7 +2,8 @@ import { ChevronLeft, Settings, Flame, GraduationCap, Moon, BookOpen, Dumbbell, 
 import { useApp } from '../context/AppContext';
 import { useState } from 'react';
 import { AddModal } from './AddModal';
-import { toast } from 'sonner';
+import { EditHabitModal } from './EditHabitModal';
+import type { Habit } from '../types';
 import './Habits.css';
 
 const getHabitIcon = (category: string) => {
@@ -42,6 +43,7 @@ export const Habits: React.FC = () => {
     const { state, toggleHabitCompletion } = useApp();
     const today = state.selectedDate;
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
     // Derived state
     const completedCount = state.habits.filter(h => h.completedDates.includes(today)).length;
@@ -116,7 +118,7 @@ export const Habits: React.FC = () => {
                                             className="icon-button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                toast.info(`「${habit.title}」の編集・削除は準備中です`);
+                                                setEditingHabit(habit);
                                             }}
                                             style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)' }}
                                             aria-label="オプション"
@@ -161,6 +163,12 @@ export const Habits: React.FC = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 initialTab="habit"
+            />
+
+            <EditHabitModal
+                isOpen={editingHabit !== null}
+                onClose={() => setEditingHabit(null)}
+                habitToEdit={editingHabit}
             />
         </div>
     );

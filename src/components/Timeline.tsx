@@ -4,6 +4,8 @@ import { useApp } from '../context/AppContext';
 import { format, addDays, subDays } from 'date-fns';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { EditEventModal } from './EditEventModal';
+import type { TimelineEvent } from '../types';
 import './Timeline.css';
 
 const getCategoryIcon = (category: string) => {
@@ -30,6 +32,7 @@ export const Timeline: React.FC = () => {
     const { state, setSelectedDate, addEvent } = useApp();
     const [isRecording, setIsRecording] = useState(false);
     const [memoText, setMemoText] = useState('');
+    const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
 
     const todaysEvents = state.events
         .filter(ev => ev.date === state.selectedDate)
@@ -129,7 +132,7 @@ export const Timeline: React.FC = () => {
                                 </div>
                                 <div
                                     className={`timeline-card ${event.category === 'work' ? 'border-accent-left' : ''}`}
-                                    onClick={() => toast.info(`${event.title} の詳細・編集機能は準備中です`)}
+                                    onClick={() => setEditingEvent(event)}
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <div className="card-top">
@@ -140,7 +143,7 @@ export const Timeline: React.FC = () => {
                                             className="event-more"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                toast.info('設定メニューを開きます');
+                                                setEditingEvent(event);
                                             }}
                                             style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer' }}
                                         >
@@ -196,6 +199,12 @@ export const Timeline: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <EditEventModal
+                isOpen={editingEvent !== null}
+                onClose={() => setEditingEvent(null)}
+                eventToEdit={editingEvent}
+            />
         </div>
     );
 };
