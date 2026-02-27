@@ -1,35 +1,30 @@
-import { ChevronLeft, ChevronRight, Calendar, Sun, Briefcase, Laptop, Coffee, Mic, Send, Edit3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Mic, Send, Edit3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { format, addDays, subDays } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { EditEventModal } from './EditEventModal';
 import { CalendarModal } from './CalendarModal';
+import { SortableEventCard } from './SortableEventCard';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { TimelineEvent } from '../types';
 import './Timeline.css';
 
-const getCategoryIcon = (category: string) => {
-    switch (category) {
-        case 'sleep': return <Sun size={18} className="timeline-icon text-muted" />;
-        case 'work': return <Briefcase size={18} className="timeline-icon text-accent" />;
-        case 'study': return <Laptop size={18} className="timeline-icon text-purple" />;
-        case 'free': return <Coffee size={18} className="timeline-icon text-orange" />;
-        default: return <Edit3 size={18} className="timeline-icon text-muted" />;
-    }
+const getMinutesFromStrictTime = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
 };
 
-const getCategoryColorClass = (category: string) => {
-    switch (category) {
-        case 'work': return 'border-accent';
-        case 'study': return 'border-purple';
-        case 'free': return 'border-orange';
-        case 'sleep': return 'border-muted';
-        default: return '';
-    }
+const formatMinutesToStrictTime = (totalMinutes: number) => {
+    const h = Math.floor(totalMinutes / 60) % 24;
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
 export const Timeline: React.FC = () => {
-    const { state, setSelectedDate, addEvent } = useApp();
+    const { state, setSelectedDate, addEvent, updateEvent } = useApp();
     const [isRecording, setIsRecording] = useState(false);
     const [memoText, setMemoText] = useState('');
     const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
@@ -45,9 +40,72 @@ export const Timeline: React.FC = () => {
     const handlePrevDay = () => setSelectedDate(format(subDays(currentDateObj, 1), 'yyyy-MM-dd'));
     const handleNextDay = () => setSelectedDate(format(addDays(currentDateObj, 1), 'yyyy-MM-dd'));
 
-    // Generate 7 days for the date navigator (start from current date's Monday, or just center around current date)
-    // Let's create a sliding window: 3 days before, current day, 3 days after
     const visibleDays = Array.from({ length: 7 }).map((_, i) => subDays(currentDateObj, 3 - i));
+
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = todaysEvents.findIndex(ev => ev.id === active.id);
+        const newIndex = todaysEvents.findIndex(ev => ev.id === over.id);
+
+        const draggedEvent = todaysEvents[oldIndex];
+        const durationMins = getMinutesFromStrictTime(draggedEvent.endTime) - getMinutesFromStrictTime(draggedEvent.startTime);
+
+        const updatedArray = arrayMove(todaysEvents, oldIndex, newIndex);
+
+        let newStartMins = 0;
+        let newEndMins = 0;
+
+        if (newIndex === 0) {
+            const nextItem = updatedArray[1];
+            newEndMins = getMinutesFromStrictTime(nextItem.startTime);
+            newStartMins = newEndMins - durationMins;
+        } else {
+            const prevItem = updatedArray[newIndex - 1];
+            newStartMins = getMinutesFromStrictTime(prevItem.endTime);
+            newEndMins = newStartMins + durationMins;
+        }
+
+        if (newStartMins < 0) {
+            newStartMins = 0;
+            newEndMins = durationMins;
+        }
+        if (newEndMins > 24 * 60 - 1) {
+            newEndMins = 24 * 60 - 1;
+            newStartMins = newEndMins - durationMins;
+        }
+
+        const newStartTime = formatMinutesToStrictTime(newStartMins);
+        const newEndTime = formatMinutesToStrictTime(newEndMins);
+
+        const hasOverlap = state.events.some(ev => {
+            if (ev.date !== draggedEvent.date) return false;
+            if (ev.id === draggedEvent.id) return false;
+            return newStartTime < ev.endTime && newEndTime > ev.startTime;
+        });
+
+        if (hasOverlap) {
+            toast.error('移動後の時間に予定が重複しています。長さを調整するか、他の予定を移動してください。');
+            return;
+        }
+
+        updateEvent(draggedEvent.id, {
+            title: draggedEvent.title,
+            category: draggedEvent.category,
+            startTime: newStartTime,
+            endTime: newEndTime,
+            memo: draggedEvent.memo,
+        });
+
+        toast.success('予定の時間を変更しました');
+    };
 
     // Setup Speech Recognition
     const recognitionRef = useRef<any>(null);
@@ -171,44 +229,17 @@ export const Timeline: React.FC = () => {
                             予定がありません。<br />下の「＋」ボタンから追加してください。
                         </div>
                     ) : (
-                        todaysEvents.map((event) => (
-                            <div key={event.id} className="timeline-event">
-                                <div className={`timeline-icon-wrapper ${getCategoryColorClass(event.category)}`}>
-                                    {getCategoryIcon(event.category)}
-                                </div>
-                                <div
-                                    className={`timeline-card ${event.category === 'work' ? 'border-accent-left' : ''}`}
-                                    onClick={() => setEditingEvent(event)}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <div className="card-top">
-                                        <span className={`event-time ${event.category === 'work' ? 'text-accent' : 'text-muted'}`}>
-                                            {event.startTime} - {event.endTime}
-                                        </span>
-                                        <button
-                                            className="event-more"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingEvent(event);
-                                            }}
-                                            style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer' }}
-                                        >
-                                            ...
-                                        </button>
-                                    </div>
-                                    <h3 className="event-title">{event.title}</h3>
-                                    {event.memo && <span className="event-location text-muted">{event.memo}</span>}
-
-                                    {event.tags && event.tags.length > 0 && (
-                                        <div className="event-tags">
-                                            {event.tags.map(tag => (
-                                                <span key={tag} className="tag">{tag}</span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={todaysEvents.map(e => e.id)} strategy={verticalListSortingStrategy}>
+                                {todaysEvents.map(event => (
+                                    <SortableEventCard
+                                        key={event.id}
+                                        event={event}
+                                        onEdit={(ev) => setEditingEvent(ev)}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
                     )}
                 </div>
 

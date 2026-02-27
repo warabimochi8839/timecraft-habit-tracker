@@ -12,7 +12,7 @@ interface EditEventModalProps {
 }
 
 export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose, eventToEdit }) => {
-    const { updateEvent, deleteEvent } = useApp();
+    const { state, updateEvent, deleteEvent } = useApp();
 
     const [eventTitle, setEventTitle] = useState('');
     const [eventStart, setEventStart] = useState('12:00');
@@ -35,6 +35,22 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose,
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
         if (!eventTitle.trim()) return;
+
+        if (eventStart >= eventEnd) {
+            toast.error('開始時間は終了時間より前である必要があります。');
+            return;
+        }
+
+        const hasOverlap = state.events.some(ev => {
+            if (ev.date !== eventToEdit.date) return false;
+            if (ev.id === eventToEdit.id) return false; // ignore self
+            return eventStart < ev.endTime && eventEnd > ev.startTime;
+        });
+
+        if (hasOverlap) {
+            toast.error('指定された時間は既存の予定と重複しています。');
+            return;
+        }
 
         updateEvent(eventToEdit.id, {
             title: eventTitle,

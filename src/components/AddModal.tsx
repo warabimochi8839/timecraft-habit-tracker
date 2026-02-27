@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Clock, Tag, AlignLeft, Target, CalendarDays } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { toast } from 'sonner';
 import './AddModal.css';
 
 interface AddModalProps {
@@ -30,6 +31,21 @@ export const AddModal: React.FC<AddModalProps> = ({ isOpen, onClose, initialTab 
     const handleSaveEvent = (e: React.FormEvent) => {
         e.preventDefault();
         if (!eventTitle.trim()) return;
+
+        if (eventStart >= eventEnd) {
+            toast.error('開始時間は終了時間より前である必要があります。');
+            return;
+        }
+
+        const hasOverlap = state.events.some(ev => {
+            if (ev.date !== state.selectedDate) return false;
+            return eventStart < ev.endTime && eventEnd > ev.startTime;
+        });
+
+        if (hasOverlap) {
+            toast.error('指定された時間は既存の予定と重複しています。');
+            return;
+        }
 
         addEvent({
             title: eventTitle,
