@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useState } from 'react';
 import { AddModal } from './AddModal';
 import { EditHabitModal } from './EditHabitModal';
+import { HabitSettingsModal } from './HabitSettingsModal';
 import type { Habit } from '../types';
 import './Habits.css';
 
@@ -39,10 +40,11 @@ const getProgressBarColor = (category: string) => {
     }
 };
 
-export const Habits: React.FC<{ onBackClick?: () => void, onSettingsClick?: () => void }> = ({ onBackClick, onSettingsClick }) => {
+export const Habits: React.FC<{ onBackClick?: () => void }> = ({ onBackClick }) => {
     const { state, toggleHabitCompletion } = useApp();
     const today = state.selectedDate;
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
     // Get today's events for duration matching
@@ -73,8 +75,8 @@ export const Habits: React.FC<{ onBackClick?: () => void, onSettingsClick?: () =
             {/* Header */}
             <header className="page-header">
                 <button className="icon-button" onClick={onBackClick}><ChevronLeft size={24} /></button>
-                <h2 className="page-title">目標設定</h2>
-                <button className="icon-button" onClick={onSettingsClick}><Settings size={24} /></button>
+                <h2 className="page-title">目標一覧</h2>
+                <button className="icon-button" onClick={() => setIsSettingsOpen(true)}><Settings size={24} /></button>
             </header>
 
             <div className="habits-scroll-area">
@@ -193,6 +195,11 @@ export const Habits: React.FC<{ onBackClick?: () => void, onSettingsClick?: () =
                 isOpen={editingHabit !== null}
                 onClose={() => setEditingHabit(null)}
                 habitToEdit={editingHabit}
+            />
+
+            <HabitSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
             />
         </div>
     );

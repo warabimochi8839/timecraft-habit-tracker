@@ -27,7 +27,6 @@ function App() {
           <div className="tab-content transition-fade">
             <Habits
               onBackClick={() => setActiveTab('timeline')}
-              onSettingsClick={() => setIsAccountModalOpen(true)}
             />
           </div>
         )}

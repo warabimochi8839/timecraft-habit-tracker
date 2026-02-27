@@ -4,6 +4,7 @@ import { format, addDays, subDays } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { EditEventModal } from './EditEventModal';
+import { CalendarModal } from './CalendarModal';
 import type { TimelineEvent } from '../types';
 import './Timeline.css';
 
@@ -32,6 +33,7 @@ export const Timeline: React.FC = () => {
     const [isRecording, setIsRecording] = useState(false);
     const [memoText, setMemoText] = useState('');
     const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const todaysEvents = state.events
         .filter(ev => ev.date === state.selectedDate)
@@ -117,9 +119,13 @@ export const Timeline: React.FC = () => {
         <div className="timeline-page">
             {/* Header */}
             <header className="page-header">
-                <button className="icon-button"><ChevronLeft size={24} /></button>
+                <button className="icon-button" onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))}>
+                    <ChevronLeft size={24} />
+                </button>
                 <h2 className="page-title">今日の振り返り</h2>
-                <button className="icon-button"><Calendar size={24} /></button>
+                <button className="icon-button" onClick={() => setIsCalendarOpen(true)}>
+                    <Calendar size={24} />
+                </button>
             </header>
 
             {/* Date Navigator */}
@@ -240,10 +246,17 @@ export const Timeline: React.FC = () => {
                 </div>
             </div>
 
-            <EditEventModal
-                isOpen={editingEvent !== null}
-                onClose={() => setEditingEvent(null)}
-                eventToEdit={editingEvent}
+            {editingEvent && (
+                <EditEventModal
+                    isOpen={true}
+                    onClose={() => setEditingEvent(null)}
+                    eventToEdit={editingEvent}
+                />
+            )}
+
+            <CalendarModal
+                isOpen={isCalendarOpen}
+                onClose={() => setIsCalendarOpen(false)}
             />
         </div>
     );
