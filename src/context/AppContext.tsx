@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect, type Re
 import { format, subDays } from 'date-fns';
 import type { AppState, TimelineEvent, Habit } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { supabase } from '../lib/supabase';
+import { supabase, sessionReady } from '../lib/supabase';
 
 interface AppContextType {
     state: AppState;
@@ -69,6 +69,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // --- Supabase Sync on Mount ---
     useEffect(() => {
         const fetchRemoteData = async () => {
+            await sessionReady;
             // Fetch events
             const { data: remoteEvents, error: evErr } = await supabase.from('events').select('*');
             if (!evErr && remoteEvents) {
@@ -113,6 +114,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setEvents(prev => [...prev, newEvent]);
 
         // Remote Sync
+        await sessionReady;
         await supabase.from('events').insert({
             id: newId,
             title: newEvent.title,
@@ -135,11 +137,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (updates.date) payload.date = updates.date;
         if (updates.tags) payload.tags = updates.tags;
 
+        await sessionReady;
         await supabase.from('events').update(payload).eq('id', id);
     };
 
     const deleteEvent = async (id: string) => {
         setEvents(prev => prev.filter(ev => ev.id !== id));
+        await sessionReady;
         await supabase.from('events').delete().eq('id', id);
     };
 
@@ -153,6 +157,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
         setHabits(prev => [...prev, newHabit]);
 
+        await sessionReady;
         await supabase.from('habits').insert({
             id: newId,
             title: newHabit.title,
@@ -171,11 +176,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (updates.targetTimeMinutes) payload.target_time_minutes = updates.targetTimeMinutes;
         if (updates.completedDates) payload.completed_dates = updates.completedDates;
 
+        await sessionReady;
         await supabase.from('habits').update(payload).eq('id', id);
     };
 
     const deleteHabit = async (id: string) => {
         setHabits(prev => prev.filter(h => h.id !== id));
+        await sessionReady;
         await supabase.from('habits').delete().eq('id', id);
     };
 
@@ -206,6 +213,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }));
 
         if (finalCompletedDates.length > 0 || true /* always run */) {
+            await sessionReady;
             await supabase.from('habits').update({ completed_dates: finalCompletedDates }).eq('id', id);
         }
     };
@@ -223,9 +231,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setHabits([]);
         setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
 
-        // Delete completely from remote as well
-        // Passing true to bypass RLS missing checks for "delete all" or we can iterate and delete
+        // RLS により、消えるのは自分（この端末の匿名ユーザー）の行だけ
         try {
+            await sessionReady;
             await supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // hack to delete all
             await supabase.from('habits').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         } catch (e) {

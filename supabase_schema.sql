@@ -1,8 +1,5 @@
--- We are creating a simple "anonymous" schema for MVP sync. 
--- In a real production app with Auth, we would use UUIDs mapping to auth.users(), 
--- but here we assume a single user or locally generated mock user_id for simplicity (if we were sharing the DB).
--- To keep it truly simple for the current state where anyone using this uses the SAME database,
--- or assumes it's a personal database for 1 user, we just create the tables.
+-- 各行に持ち主（user_id）を持たせ、RLS で自分の行だけ操作できるようにする。
+-- 利用者は端末ごとの匿名サインイン（Authentication で Allow anonymous sign-ins を有効化）。
 
 CREATE TABLE IF NOT EXISTS public.events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -12,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   end_time TEXT,
   date TEXT NOT NULL,
   tags JSONB DEFAULT '[]'::jsonb,
+  user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -21,24 +19,28 @@ CREATE TABLE IF NOT EXISTS public.habits (
   category TEXT NOT NULL,
   target_time_minutes INTEGER NOT NULL,
   completed_dates JSONB DEFAULT '[]'::jsonb,
+  user_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Note: 'currentStreak' is calculated on the client side, so we don't need a DB column for it.
 
--- Enable Row Level Security (RLS) but set it to allow all for this MVP without Auth
+-- Row Level Security：サインイン済みのユーザーが自分の行だけを操作できる
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all operations for events" ON public.events
-  FOR ALL TO public
-  USING (true)
-  WITH CHECK (true);
+CREATE POLICY "Own rows only" ON public.events
+  FOR ALL TO authenticated
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
-CREATE POLICY "Allow all operations for habits" ON public.habits
-  FOR ALL TO public
-  USING (true)
-  WITH CHECK (true);
+CREATE POLICY "Own rows only" ON public.habits
+  FOR ALL TO authenticated
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
+
+CREATE INDEX IF NOT EXISTS events_user_id_idx ON public.events (user_id);
+CREATE INDEX IF NOT EXISTS habits_user_id_idx ON public.habits (user_id);
 
 -- Enable realtime broadcasts for both tables
 alter publication supabase_realtime add table public.events;
